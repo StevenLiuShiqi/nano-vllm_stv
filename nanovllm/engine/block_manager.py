@@ -12,8 +12,6 @@ class Block:
         self.ref_count = 0
         self.hash = -1
         self.token_ids = []
-        self.num_cache_hits = 0
-        self.num_cache_misses = 0
 
     def update(self, hash: int, token_ids: list[int]):
         self.hash = hash
@@ -33,6 +31,8 @@ class BlockManager:
         self.hash_to_block_id: dict[int, int] = dict()
         self.free_block_ids: deque[int] = deque(range(num_blocks))
         self.used_block_ids: set[int] = set()
+        self.num_cache_hits = 0
+        self.num_cache_misses = 0
 
     @classmethod
     def compute_hash(cls, token_ids: list[int], prefix: int = -1):
