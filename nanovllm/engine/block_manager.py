@@ -12,6 +12,8 @@ class Block:
         self.ref_count = 0
         self.hash = -1
         self.token_ids = []
+        self.num_cache_hits = 0
+        self.num_cache_misses = 0
 
     def update(self, hash: int, token_ids: list[int]):
         self.hash = hash
@@ -67,9 +69,11 @@ class BlockManager:
             if block_id == -1 or self.blocks[block_id].token_ids != token_ids:
                 cache_miss = True
             if cache_miss:
+                self.num_cache_misses += 1
                 block_id = self.free_block_ids[0]
                 block = self._allocate_block(block_id)
             else:
+                self.num_cache_hits += 1
                 seq.num_cached_tokens += self.block_size
                 if block_id in self.used_block_ids:
                     block = self.blocks[block_id]
@@ -110,3 +114,16 @@ class BlockManager:
             self.hash_to_block_id[h] = last_block.block_id
         else:
             assert last_block.hash == -1
+    
+    def stats(self) -> dict:
+        total = len(self.blocks)
+        used = len(self.used_block_ids)
+        hit_rate = self.num_cache_hits / max (1, self.num_cache_hits + self.num_cache_misses)
+        return {
+            "total_blocks": total,
+            "used_blocks": used,
+            "free_blocks": total - used,
+            "cache_hits": self.num_cache_hits,
+            "cache_misses": self.num_cache_misses,
+            "hit_rate": f"{hit_rate:.1%}",
+        }
