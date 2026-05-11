@@ -12,6 +12,8 @@ def main():
     prompts = [
         "introduce yourself",
         "list all prime numbers within 100",
+        "introduce yourself",
+        "list all prime numbers within 50",
     ]
     prompts = [
         tokenizer.apply_chat_template(
@@ -22,7 +24,7 @@ def main():
         for prompt in prompts
     ]
     outputs = llm.generate(prompts, sampling_params)
-    attn = llm.llm_engine.model_runner.model.model.layers[0].self_attn          
+    attn = llm.model_runner.model.model.layers[0].self_attn.attn 
     print(attn.get_stats()) 
 
     for prompt, output in zip(prompts, outputs):
