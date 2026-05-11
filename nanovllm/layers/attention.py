@@ -55,6 +55,11 @@ class Attention(nn.Module):
         self.scale = scale
         self.num_kv_heads = num_kv_heads
         self.k_cache = self.v_cache = torch.tensor([])
+        self.num_prefill_calls = 0
+        self.num_decode_calls = 0
+        self.num_prefill_tokens = 0
+        self.num_decode_tokens = 0
+        self.num_prefix_cache_used = 0
 
     def forward(self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor):
         context = get_context()
@@ -62,14 +67,29 @@ class Attention(nn.Module):
         if k_cache.numel() and v_cache.numel():
             store_kvcache(k, v, k_cache, v_cache, context.slot_mapping)
         if context.is_prefill:
+            self.num_prefill_calls += 1
+            self.num_prefill_tokens += q.shape[0]   # prefilling len(q) tokens
             if context.block_tables is not None:    # prefix cache
                 k, v = k_cache, v_cache
+                self.num_prefix_cache_used += 1
             o = flash_attn_varlen_func(q, k, v,
                                        max_seqlen_q=context.max_seqlen_q, cu_seqlens_q=context.cu_seqlens_q,
                                        max_seqlen_k=context.max_seqlen_k, cu_seqlens_k=context.cu_seqlens_k,
                                        softmax_scale=self.scale, causal=True, block_table=context.block_tables)
         else:    # decode
+            self.num_decode_calls += 1
+            self.num_decode_tokens += context.context_lens.shape[0]
             o = flash_attn_with_kvcache(q.unsqueeze(1), k_cache, v_cache,
                                         cache_seqlens=context.context_lens, block_table=context.block_tables, 
                                         softmax_scale=self.scale, causal=True)
         return o
+    
+
+    def get_stats(self) -> dict:                                                
+      return {                                                                
+          "prefill_calls": self.num_prefill_calls,
+          "decode_calls": self.num_decode_calls,                              
+          "prefill_tokens": self.num_prefill_tokens,                          
+          "decode_tokens": self.num_decode_tokens,                            
+          "prefix_cache_used": self.num_prefix_cache_used,                    
+      } 
