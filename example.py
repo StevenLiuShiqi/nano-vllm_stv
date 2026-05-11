@@ -4,7 +4,7 @@ from transformers import AutoTokenizer
 
 
 def main():
-    path = os.path.expanduser("~/huggingface/Qwen3-0.6B/")
+    path = os.path.expanduser("/root/autodl-tmp/huggingface/Qwen3-0.6B")
     tokenizer = AutoTokenizer.from_pretrained(path)
     llm = LLM(path, enforce_eager=True, tensor_parallel_size=1)
 
@@ -22,6 +22,8 @@ def main():
         for prompt in prompts
     ]
     outputs = llm.generate(prompts, sampling_params)
+    attn = llm.llm_engine.model_runner.model.model.layers[0].self_attn          
+    print(attn.get_stats()) 
 
     for prompt, output in zip(prompts, outputs):
         print("\n")
