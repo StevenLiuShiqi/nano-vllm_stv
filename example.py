@@ -34,10 +34,13 @@ def main():
     # attn = llm.model_runner.model.model.layers[0].self_attn.attn 
     # print(attn.get_stats()) 
 
-    for prompt, output in zip(prompts, outputs1 + outputs2):
-        print("\n")
-        print(f"Prompt: {prompt!r}")
-        print(f"Completion: {output['text']!r}")
+    for prompt, output in zip(prompts[:2], outputs1):
+      print(f"Prompt: {prompt!r}")                                            
+      print(f"Completion: {output['text']!r}") 
+                                                                              
+    for prompt, output in zip(prompts[:2], outputs2):                           
+      print(f"Prompt: {prompt!r}")             
+      print(f"Completion: {output['text']!r}") 
 
 
 if __name__ == "__main__":
