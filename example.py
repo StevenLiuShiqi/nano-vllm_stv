@@ -23,11 +23,18 @@ def main():
         )
         for prompt in prompts
     ]
-    outputs = llm.generate(prompts, sampling_params)
-    attn = llm.model_runner.model.model.layers[0].self_attn.attn 
-    print(attn.get_stats()) 
 
-    for prompt, output in zip(prompts, outputs):
+    outputs1 = llm.generate(prompts[:2], sampling_params)                       
+    outputs2 = llm.generate(prompts[:2], sampling_params)           
+
+    attn = llm.model_runner.model.model.layers[0].self_attn.attn                
+    print(attn.get_stats())       
+
+    # outputs = llm.generate(prompts, sampling_params)
+    # attn = llm.model_runner.model.model.layers[0].self_attn.attn 
+    # print(attn.get_stats()) 
+
+    for prompt, output in zip(prompts, outputs1 + outputs2):
         print("\n")
         print(f"Prompt: {prompt!r}")
         print(f"Completion: {output['text']!r}")
