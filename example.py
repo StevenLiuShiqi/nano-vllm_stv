@@ -8,13 +8,11 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(path)
     llm = LLM(path, enforce_eager=True, tensor_parallel_size=1)
 
-    sampling_params = SamplingParams(temperature=0.6, max_tokens=256)
-    prompts = [
+    sampling_params = SamplingParams(temperature=0.6, max_tokens=2048)
+    prompts = [                                                                 
+        "Please analyze the following text and provide a detailed summary: " + "The quick brown fox jumps over the lazy dog. " * 30,                       
         "introduce yourself",
-        "list all prime numbers within 100",
-        "introduce yourself",
-        "list all prime numbers within 50",
-    ]
+    ]  
     prompts = [
         tokenizer.apply_chat_template(
             [{"role": "user", "content": prompt}],
@@ -24,8 +22,8 @@ def main():
         for prompt in prompts
     ]
 
-    outputs1 = llm.generate(prompts[:2], sampling_params)                       
-    outputs2 = llm.generate(prompts[:2], sampling_params)           
+    outputs1 = llm.generate(prompts[:2], sampling_params)
+    outputs2 = llm.generate(prompts[:2], sampling_params)
 
     attn = llm.model_runner.model.model.layers[0].self_attn.attn                
     print(attn.get_stats())       
