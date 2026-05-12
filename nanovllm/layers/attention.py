@@ -92,4 +92,11 @@ class Attention(nn.Module):
           "prefill_tokens": self.num_prefill_tokens,                          
           "decode_tokens": self.num_decode_tokens,                            
           "prefix_cache_used": self.num_prefix_cache_used,                    
-      } 
+      }
+    
+    def clear_stats(self):
+      self.num_prefill_calls = 0
+      self.num_decode_calls = 0
+      self.num_prefill_tokens = 0
+      self.num_decode_tokens = 0
+      self.num_prefix_cache_used = 0

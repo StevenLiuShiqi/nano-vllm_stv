@@ -23,10 +23,13 @@ def main():
     ]
 
     outputs1 = llm.generate(prompts[:2], sampling_params)
-    outputs2 = llm.generate(prompts[:2], sampling_params)
-
     attn = llm.model_runner.model.model.layers[0].self_attn.attn                
-    print(attn.get_stats())       
+    print(attn.get_stats())
+    attn.clear_stats()
+
+    outputs2 = llm.generate(prompts[:2], sampling_params)
+    attn = llm.model_runner.model.model.layers[0].self_attn.attn            
+    print(attn.get_stats())
 
     # outputs = llm.generate(prompts, sampling_params)
     # attn = llm.model_runner.model.model.layers[0].self_attn.attn 
