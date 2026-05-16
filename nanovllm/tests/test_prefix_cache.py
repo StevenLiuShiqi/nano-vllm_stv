@@ -7,7 +7,7 @@ bm = BlockManager(num_blocks=20, block_size=4)
 seq_a = Sequence([1, 2, 3, 4,  5, 6, 7, 8,  9, 10, 11, 12])
 seq_a.block_size = 4
 bm.allocate(seq_a)                                                
-print("After seq_a allocate:", bm.stats())                      
+print("After seq_a allocate:", bm.get_stats())                      
 print("seq_a block_table:", seq_a.block_table)                    
 print("seq_a num_cached_tokens:", seq_a.num_cached_tokens)        
                                                                   
@@ -15,7 +15,7 @@ print("seq_a num_cached_tokens:", seq_a.num_cached_tokens)
 seq_b = Sequence([1, 2, 3, 4,  5, 6, 7, 8,  99, 100, 101, 102])
 seq_b.block_size = 4
 bm.allocate(seq_b)                                                
-print("\nAfter seq_b allocate:", bm.stats()) 
+print("\nAfter seq_b allocate:", bm.get_stats()) 
 print("seq_b block_table:", seq_b.block_table)                    
 print("seq_b num_cached_tokens:", seq_b.num_cached_tokens)        
                                                                 

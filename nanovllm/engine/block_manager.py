@@ -115,7 +115,7 @@ class BlockManager:
         else:
             assert last_block.hash == -1
     
-    def stats(self) -> dict:
+    def get_stats(self) -> dict:
         total = len(self.blocks)
         used = len(self.used_block_ids)
         hit_rate = self.num_cache_hits / max (1, self.num_cache_hits + self.num_cache_misses)
@@ -127,3 +127,7 @@ class BlockManager:
             "cache_misses": self.num_cache_misses,
             "hit_rate": f"{hit_rate:.1%}",
         }
+    
+    def clear_stats(self):
+        self.num_cache_hits = 0
+        self.num_cache_misses = 0

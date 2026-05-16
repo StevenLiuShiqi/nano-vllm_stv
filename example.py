@@ -36,12 +36,12 @@ def main():
     # print(attn.get_stats()) 
 
     for prompt, output in zip(prompts[:2], outputs1):
-      print(f"Prompt: {prompt!r}")                                            
-      print(f"Completion: {output['text']!r}") 
+      print(f"Prompt: {prompt[:100]}")                                            
+      print(f"Completion: {output['text']}") 
                                                                               
     for prompt, output in zip(prompts[:2], outputs2):                           
-      print(f"Prompt: {prompt!r}")             
-      print(f"Completion: {output['text']!r}") 
+      print(f"Prompt: {prompt[:100]}")             
+      print(f"Completion: {output['text']}") 
 
 
 if __name__ == "__main__":
