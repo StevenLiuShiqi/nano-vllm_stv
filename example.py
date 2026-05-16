@@ -23,7 +23,7 @@ def main():
     ]
 
     attn = llm.model_runner.model.model.layers[0].self_attn.attn
-    blkmngr = llm.engine.scheduler.block_manager
+    blkmngr = llm.scheduler.block_manager
 
     attn.clear_stats()
     blkmngr.clear_stats()
@@ -36,6 +36,7 @@ def main():
     outputs2 = llm.generate(prompts[:2], sampling_params)
     attn = llm.model_runner.model.model.layers[0].self_attn.attn            
     print(attn.get_stats())
+    print(blkmngr.get_stats())
 
     # outputs = llm.generate(prompts, sampling_params)
     # attn = llm.model_runner.model.model.layers[0].self_attn.attn 
