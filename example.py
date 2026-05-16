@@ -22,8 +22,10 @@ def main():
         for prompt in prompts
     ]
 
+    attn = llm.model_runner.model.model.layers[0].self_attn.attn
+
+    attn.clear_stats()
     outputs1 = llm.generate(prompts[:2], sampling_params)
-    attn = llm.model_runner.model.model.layers[0].self_attn.attn                
     print(attn.get_stats())
     attn.clear_stats()
 
