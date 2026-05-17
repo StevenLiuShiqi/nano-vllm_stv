@@ -33,6 +33,7 @@ class BlockManager:
         self.used_block_ids: set[int] = set()
         self.num_cache_hits = 0
         self.num_cache_misses = 0
+        self.peak_used_blocks = 0
 
     @classmethod
     def compute_hash(cls, token_ids: list[int], prefix: int = -1):
@@ -84,9 +85,9 @@ class BlockManager:
                 block.update(h, token_ids)
                 self.hash_to_block_id[h] = block_id
             seq.block_table.append(block_id)
+        self.peak_used_blocks = max(self.peak_used_blocks, len(self.used_block_ids))
 
     def deallocate(self, seq: Sequence):
-        print(self.get_stats())
         for block_id in reversed(seq.block_table):
             block = self.blocks[block_id]
             block.ref_count -= 1
@@ -127,8 +128,10 @@ class BlockManager:
             "cache_hits": self.num_cache_hits,
             "cache_misses": self.num_cache_misses,
             "hit_rate": f"{hit_rate:.1%}",
+            "peak_used_blocks": self.peak_used_blocks,
         }
     
     def clear_stats(self):
         self.num_cache_hits = 0
         self.num_cache_misses = 0
+        self.peak_used_blocks = 0
