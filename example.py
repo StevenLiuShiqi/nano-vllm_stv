@@ -31,7 +31,7 @@ def main():
     print(attn.get_stats())
     print(blkmngr.get_stats())
     attn.clear_stats()
-    blkmngr.clear_stats
+    blkmngr.clear_stats()
 
     outputs2 = llm.generate(prompts[:2], sampling_params)
     # attn = llm.model_runner.model.model.layers[0].self_attn.attn            
