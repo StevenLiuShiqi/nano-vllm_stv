@@ -46,12 +46,32 @@ class LLMEngine:
         self.scheduler.add(seq)
 
     def step(self):
-        seqs, is_prefill = self.scheduler.schedule()
-        token_ids = self.model_runner.call("run", seqs, is_prefill)
-        self.scheduler.postprocess(seqs, token_ids)
-        outputs = [(seq.seq_id, seq.completion_token_ids) for seq in seqs if seq.is_finished]
-        num_tokens = sum(len(seq) for seq in seqs) if is_prefill else -len(seqs)
-        return outputs, num_tokens
+        prefill_seqs, decode_seqs = self.scheduler.schedule()
+        
+        # prefill (if any)
+        prefill_token_ids = []
+        if prefill_seqs:
+            prefill_token_ids = self.model_runner.call("run", prefill_seqs, True)
+            for seq in prefill_seqs:
+                seq.num_computed_tokens = seq.num_prompt_tokens
+
+        # decode (if any)
+        decode_token_ids = []
+        if decode_seqs:
+            decode_token_ids = self.model_runner.call("run", decode_seqs, False)
+
+        self.scheduler.postprocess(prefill_seqs, prefill_token_ids)
+        self.scheduler.postprocess(decode_seqs, decode_token_ids)
+
+        all_seqs = prefill_seqs + decode_seqs
+        outputs = [(seq.seq_id, seq.completion_token_ids) for seq in all_seqs if seq.is_finished] 
+
+        if prefill_seqs:  
+            num_tokens = sum(len(seq) for seq in prefill_seqs)                         
+        else:
+            num_tokens = -len(decode_seqs)                                             
+                                                                                    
+        return outputs, num_tokens 
 
     def is_finished(self):
         return self.scheduler.is_finished()

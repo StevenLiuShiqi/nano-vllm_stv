@@ -23,6 +23,7 @@ class Sequence:
         self.num_tokens = len(self.token_ids)
         self.num_prompt_tokens = len(token_ids)
         self.num_cached_tokens = 0
+        self.num_computed_tokens = 0 # add for chunked prefill
         self.block_table = []
         self.temperature = sampling_params.temperature
         self.max_tokens = sampling_params.max_tokens
@@ -53,6 +54,10 @@ class Sequence:
     @property
     def num_cached_blocks(self):
         return self.num_cached_tokens // self.block_size
+    
+    @property
+    def is_prefill_done(self):
+        return self.num_computed_tokens >= self.num_prompt_tokens
 
     @property
     def num_blocks(self):
