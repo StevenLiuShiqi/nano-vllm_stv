@@ -1,4 +1,5 @@
 import atexit
+import statistics
 from dataclasses import fields
 from time import perf_counter
 from tqdm.auto import tqdm
@@ -31,6 +32,10 @@ class LLMEngine:
         self.tokenizer = AutoTokenizer.from_pretrained(config.model, use_fast=True)
         config.eos = self.tokenizer.eos_token_id
         self.scheduler = Scheduler(config)
+        self.step_latencies: list[float] = []
+        self.num_prefill_steps = 0
+        self.num_decode_steps = 0
+        self.num_mixed_steps = 0
         atexit.register(self.exit)
 
     def exit(self):
@@ -46,8 +51,9 @@ class LLMEngine:
         self.scheduler.add(seq)
 
     def step(self):
+        t_step = perf_counter()
         prefill_seqs, decode_seqs = self.scheduler.schedule()
-        
+
         # prefill (if any)
         prefill_token_ids = []
         if prefill_seqs:
@@ -72,15 +78,47 @@ class LLMEngine:
         all_seqs = prefill_seqs + decode_seqs
         outputs = [(seq.seq_id, seq.completion_token_ids) for seq in all_seqs if seq.is_finished] 
 
-        if prefill_seqs:  
-            num_tokens = sum(len(seq) for seq in prefill_seqs)                         
+        if prefill_seqs:
+            num_tokens = sum(len(seq) for seq in prefill_seqs)
         else:
-            num_tokens = -len(decode_seqs)                                             
-                                                                                    
-        return outputs, num_tokens 
+            num_tokens = -len(decode_seqs)
+
+        self.step_latencies.append(perf_counter() - t_step)
+        if prefill_seqs and decode_seqs:
+            self.num_mixed_steps += 1
+        elif prefill_seqs:
+            self.num_prefill_steps += 1
+        else:
+            self.num_decode_steps += 1
+
+        return outputs, num_tokens
 
     def is_finished(self):
         return self.scheduler.is_finished()
+
+    def clear_stats(self):
+        self.step_latencies = []
+        self.num_prefill_steps = 0
+        self.num_decode_steps = 0
+        self.num_mixed_steps = 0
+
+    def get_stats(self) -> dict:
+        lats_ms = [l * 1000 for l in self.step_latencies]
+        if not lats_ms:
+            return {"total_steps": 0}
+        p99 = (statistics.quantiles(lats_ms, n=100)[98]
+               if len(lats_ms) >= 100 else max(lats_ms))
+        return {
+            "total_steps": len(lats_ms),
+            "prefill_steps": self.num_prefill_steps,
+            "decode_steps": self.num_decode_steps,
+            "mixed_steps": self.num_mixed_steps,
+            "total_time_s": round(sum(lats_ms) / 1000, 3),
+            "avg_step_ms": round(statistics.mean(lats_ms), 2),
+            "p50_step_ms": round(statistics.median(lats_ms), 2),
+            "p99_step_ms": round(p99, 2),
+            "max_step_ms": round(max(lats_ms), 2),
+        }
 
     def generate(
         self,
