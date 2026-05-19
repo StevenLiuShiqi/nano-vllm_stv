@@ -53,7 +53,13 @@ class LLMEngine:
         if prefill_seqs:
             prefill_token_ids = self.model_runner.call("run", prefill_seqs, True)
             for seq in prefill_seqs:
-                seq.num_computed_tokens = seq.num_prompt_tokens
+                if self.scheduler.chunk_size is None:
+                    seq.num_computed_tokens = seq.num_prompt_tokens
+                else:
+                    seq.num_computed_tokens = min(
+                        seq.num_computed_tokens + self.scheduler.chunk_size,
+                        seq.num_prompt_tokens
+                    )
 
         # decode (if any)
         decode_token_ids = []

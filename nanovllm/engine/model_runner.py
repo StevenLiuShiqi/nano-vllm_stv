@@ -18,6 +18,7 @@ class ModelRunner:
         self.config = config
         hf_config = config.hf_config
         self.block_size = config.kvcache_block_size
+        self.chunk_size = config.chunk_size
         self.enforce_eager = config.enforce_eager
         self.world_size = config.tensor_parallel_size
         self.rank = rank
@@ -133,24 +134,32 @@ class ModelRunner:
         slot_mapping = []
         block_tables = None
         for seq in seqs:
-            seqlen = len(seq)
-            input_ids.extend(seq[seq.num_cached_tokens:])
-            positions.extend(list(range(seq.num_cached_tokens, seqlen)))
-            seqlen_q = seqlen - seq.num_cached_tokens
-            seqlen_k = seqlen
+            start = seq.num_computed_tokens
+            if self.chunk_size is None:
+                end = len(seq)
+            else:
+                end = min(start + self.chunk_size, seq.num_prompt_tokens)
+            input_ids.extend(seq[start:end])
+            positions.extend(range(start, end))
+            seqlen_q = end - start
+            seqlen_k = end
             cu_seqlens_q.append(cu_seqlens_q[-1] + seqlen_q)
             cu_seqlens_k.append(cu_seqlens_k[-1] + seqlen_k)
             max_seqlen_q = max(seqlen_q, max_seqlen_q)
             max_seqlen_k = max(seqlen_k, max_seqlen_k)
             if not seq.block_table:    # warmup
                 continue
-            for i in range(seq.num_cached_blocks, seq.num_blocks):
-                start = seq.block_table[i] * self.block_size
-                if i != seq.num_blocks - 1:
-                    end = start + self.block_size
-                else:
-                    end = start + seq.last_block_num_tokens 
-                slot_mapping.extend(list(range(start, end)))
+            # for i in range(seq.num_cached_blocks, seq.num_blocks):
+            #     start = seq.block_table[i] * self.block_size
+            #     if i != seq.num_blocks - 1:
+            #         end = start + self.block_size
+            #     else:
+            #         end = start + seq.last_block_num_tokens 
+            #     slot_mapping.extend(list(range(start, end)))
+            for p in range(start, end):
+                block_idx = p // self.block_size
+                offset = p % self.block_size
+                slot_mapping.append(seq.block_table[block_idx] * self.block_size + offset)
         if cu_seqlens_k[-1] > cu_seqlens_q[-1]:    # prefix cache
             block_tables = self.prepare_block_tables(seqs)
         input_ids = torch.tensor(input_ids, dtype=torch.int64, pin_memory=True).cuda(non_blocking=True)

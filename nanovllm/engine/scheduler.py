@@ -34,6 +34,7 @@ class Scheduler:
                     break
                 num_seqs += 1
                 self.block_manager.allocate(seq)
+                seq.num_computed_tokens = seq.num_cached_tokens
                 num_batched_tokens += len(seq) - seq.num_cached_tokens
                 seq.status = SequenceStatus.RUNNING
                 self.waiting.popleft()
