@@ -1,30 +1,15 @@
+import argparse
+import json
 import os
-from nanovllm import LLM, SamplingParams
-from transformers import AutoTokenizer
+import subprocess
+import sys
 
 
-def run_and_report(label: str, chunk_size, prompts, sampling_params, model_path):
-    print(f"\n{'='*60}\n{label}  (chunk_size={chunk_size})\n{'='*60}")
-    kwargs = {"enforce_eager": True, "tensor_parallel_size": 1}
-    if chunk_size is not None:
-        kwargs["chunk_size"] = chunk_size
-    llm = LLM(model_path, **kwargs)
+def run_once(chunk_size):
+    import os
+    from nanovllm import LLM, SamplingParams
+    from transformers import AutoTokenizer
 
-    blkmngr = llm.scheduler.block_manager
-    llm.clear_stats()
-    blkmngr.clear_stats()
-
-    outputs = llm.generate(prompts, sampling_params)
-
-    print("engine stats:", llm.get_stats())
-    print("block_manager stats:", blkmngr.get_stats())
-    for prompt, output in zip(prompts, outputs):
-        print(f"Prompt: {prompt[:80]}")
-        print(f"Completion: {output['text'][:100]}")
-    return llm.get_stats()
-
-
-def main():
     path = os.path.expanduser("/root/autodl-tmp/huggingface/Qwen3-0.6B")
     tokenizer = AutoTokenizer.from_pretrained(path)
 
@@ -43,8 +28,54 @@ def main():
         for p in raw_prompts
     ]
 
-    baseline = run_and_report("Baseline (no chunking)", None, prompts, sampling_params, path)
-    chunked = run_and_report("Chunked prefill", 128, prompts, sampling_params, path)
+    kwargs = {"enforce_eager": True, "tensor_parallel_size": 1}
+    if chunk_size is not None:
+        kwargs["chunk_size"] = chunk_size
+    llm = LLM(path, **kwargs)
+
+    blkmngr = llm.scheduler.block_manager
+    llm.clear_stats()
+    blkmngr.clear_stats()
+
+    outputs = llm.generate(prompts, sampling_params)
+
+    stats = llm.get_stats()
+    print("__STATS__" + json.dumps(stats))
+    print("block_manager stats:", blkmngr.get_stats())
+    for prompt, output in zip(prompts, outputs):
+        print(f"Prompt: {prompt[:80]}")
+        print(f"Completion: {output['text'][:100]}")
+
+
+def run_subprocess(label, chunk_size):
+    print(f"\n{'='*60}\n{label}  (chunk_size={chunk_size})\n{'='*60}")
+    cmd = [sys.executable, __file__, "--child"]
+    if chunk_size is not None:
+        cmd += ["--chunk-size", str(chunk_size)]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    stats = None
+    for line in result.stdout.splitlines():
+        if line.startswith("__STATS__"):
+            stats = json.loads(line[len("__STATS__"):])
+        else:
+            print(line)
+    if result.returncode != 0:
+        print("STDERR:", result.stderr)
+    return stats or {}
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--child", action="store_true")
+    parser.add_argument("--chunk-size", type=int, default=None)
+    args = parser.parse_args()
+
+    if args.child:
+        run_once(args.chunk_size)
+        return
+
+    baseline = run_subprocess("Baseline (no chunking)", None)
+    chunked = run_subprocess("Chunked prefill", 128)
 
     print(f"\n{'='*60}\nComparison\n{'='*60}")
     keys = ["total_steps", "prefill_steps", "decode_steps", "mixed_steps",
